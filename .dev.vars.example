@@ -1,0 +1,2 @@
+# Used by wrangler dev for local environment variables
+BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ

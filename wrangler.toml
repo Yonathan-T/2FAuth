@@ -1,0 +1,14 @@
+name = "2fauth"
+main = "src/index.js"
+compatibility_date = "2024-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "2fauth_db"
+database_id = "0ba722d4-e0a1-42ec-a155-667bf16c23be"
+migrations_dir = "migrations"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

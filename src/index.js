@@ -458,7 +458,11 @@ async function handleDeleteCommand(msg, env) {
   await deleteMessage(token, chatId, msg.message_id);
 
   if (parts.length < 2) {
-    await sendMessage(token, chatId, '⚠️ Format: <code>/delete &lt;ID&gt;</code>');
+    await sendMessage(
+      token,
+      chatId,
+      '⚠️ Format: <code>/delete &lt;# or Name&gt;</code>\nExample: <code>/delete 1</code> or <code>/delete GitHub</code>'
+    );
     return;
   }
 
@@ -806,7 +810,7 @@ async function sendHelp(token, chatId) {
     `• <code>/list</code> - View all stored accounts\n` +
     `• <code>/add &lt;Service&gt; &lt;Secret&gt;</code> - Add a new account\n` +
     `• <code>/timeout &lt;minutes&gt;</code> - Set auto-lock timeout\n` +
-    `• <code>/delete &lt;ID&gt;</code> - Remove an account\n` +
+    `• <code>/delete &lt;# or Name&gt;</code> - Remove an account (by number or name)\n` +
     `• <code>/recover &lt;KEY&gt; &lt;NEW_PIN&gt;</code> - Recover lost PIN\n` +
     `• <code>/newrecoverykey</code> - Generate fresh recovery key\n` +
     `• <code>/time</code> - Check atomic time and clock sync guide\n` +

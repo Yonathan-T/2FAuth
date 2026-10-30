@@ -15,6 +15,7 @@ import {
   createSession,
   getSession,
   deleteSession,
+  purgeExpiredSessions,
   upsertAccount,
   listAccounts,
   getAccountById,
@@ -99,6 +100,9 @@ export default {
 };
 
 async function handleUpdate(update, env, ctx) {
+  if (ctx && ctx.waitUntil) {
+    ctx.waitUntil(purgeExpiredSessions(env.DB).catch(() => {}));
+  }
   if (update.message) {
     await handleMessage(update.message, env, ctx);
   } else if (update.callback_query) {
@@ -961,6 +965,7 @@ async function handleMiniAppSync(request, env) {
     'SELECT id, service_name, account_label, encrypted_secret, iv, created_at FROM accounts WHERE user_id = ?'
   ).bind(tgUser.id).all();
 
+  await purgeExpiredSessions(env.DB).catch(() => {});
   const session = await getSession(env.DB, tgUser.id);
 
   return new Response(

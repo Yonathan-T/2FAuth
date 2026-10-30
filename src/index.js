@@ -421,6 +421,20 @@ async function handleAddCommand(chatId, userId, text, env) {
     return;
   }
 
+  const trimmed = text.trim();
+  if (trimmed.toLowerCase() === '/add') {
+    await sendMessage(
+      token,
+      chatId,
+      '⚠️ Format: <code>/add &lt;Service&gt; &lt;Secret&gt; [Label]</code>\n\n' +
+      '<b>Examples:</b>\n' +
+      '• <code>/add GitHub JBSWY3DPEHPK3PXP</code>\n' +
+      '• <code>/add Google JBSWY3DPEHPK3PXP user@gmail.com</code>\n\n' +
+      '💡 <i>Tip: You can also send a photo/screenshot of any QR code!</i>'
+    );
+    return;
+  }
+
   let parsed;
   try {
     parsed = parseAddInput(text);

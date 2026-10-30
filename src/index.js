@@ -131,6 +131,11 @@ async function handleMessage(msg, env, ctx) {
     return;
   }
 
+  if (text.startsWith('/time') || text.startsWith('/troubleshoot') || text.startsWith('/sync')) {
+    await sendTimeDiagnostics(token, chatId);
+    return;
+  }
+
   if (text.startsWith('/help')) {
     await sendHelp(token, chatId);
     return;
@@ -466,10 +471,20 @@ async function handleDeleteCommand(msg, env) {
   }
 
   const allAccounts = await listAccounts(env.DB, userId);
-  let targetAccount = await getAccountById(env.DB, userId, targetNum);
+  let targetAccount = null;
 
-  if (!targetAccount && targetNum >= 1 && targetNum <= allAccounts.length) {
+  if (!isNaN(targetNum) && targetNum >= 1 && targetNum <= allAccounts.length) {
     targetAccount = allAccounts[targetNum - 1];
+  } else {
+    const query = parts.slice(1).join(' ').toLowerCase();
+    targetAccount = allAccounts.find(
+      (a) =>
+        a.service_name.toLowerCase() === query ||
+        (a.account_label && a.account_label.toLowerCase() === query)
+    );
+    if (!targetAccount && !isNaN(targetNum)) {
+      targetAccount = await getAccountById(env.DB, userId, targetNum);
+    }
   }
 
   if (!targetAccount) {
@@ -794,7 +809,26 @@ async function sendHelp(token, chatId) {
     `• <code>/delete &lt;ID&gt;</code> - Remove an account\n` +
     `• <code>/recover &lt;KEY&gt; &lt;NEW_PIN&gt;</code> - Recover lost PIN\n` +
     `• <code>/newrecoverykey</code> - Generate fresh recovery key\n` +
+    `• <code>/time</code> - Check atomic time and clock sync guide\n` +
     `• <code>/about</code> - About 2FAuth and source code`;
+
+  await sendMessage(token, chatId, text);
+}
+
+async function sendTimeDiagnostics(token, chatId) {
+  const now = new Date();
+  const utcString = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+  const remaining = 30 - (Math.floor(now.getTime() / 1000) % 30);
+
+  const text =
+    `⏱️ <b>2FAuth Time Diagnostics</b>\n\n` +
+    `• <b>Edge Server Time:</b> <code>${utcString}</code>\n` +
+    `• <b>Current Window Cycle:</b> ${remaining}s remaining\n` +
+    `• <b>Protocol:</b> RFC 6238 TOTP (30s step)\n\n` +
+    `💡 <b>If a site (GitHub/Vercel) says "Code invalid":</b>\n` +
+    `1. Ensure your device clock is set to <b>"Set time automatically"</b> in Windows / iOS / Android settings.\n` +
+    `2. Even 30 seconds of device clock drift will cause codes to expire prematurely.\n` +
+    `3. The 2FAuth Mini App automatically calibrates against Cloudflare atomic time when opened.`;
 
   await sendMessage(token, chatId, text);
 }
@@ -913,6 +947,7 @@ async function handleMiniAppSync(request, env) {
 
   return new Response(
     JSON.stringify({
+      server_time: Math.floor(Date.now() / 1000),
       user: {
         telegram_id: user.telegram_id,
         first_name: user.first_name,

@@ -625,10 +625,11 @@
       pinVerifier: null,
       decryptedAccounts: [],
       filter: '',
+      timeOffset: 0,
     };
 
     function updateClock() {
-      const now = new Date();
+      const now = new Date(Date.now() + (state.timeOffset || 0) * 1000);
       const utc = now.toISOString().substring(11, 19) + ' UTC';
       document.getElementById('liveClock').textContent = utc;
     }
@@ -707,7 +708,10 @@
       return bytes;
     }
 
-    async function computeTOTP(secretKey, epochSeconds = Math.floor(Date.now() / 1000), timeStep = 30) {
+    async function computeTOTP(secretKey, epochSeconds = null, timeStep = 30) {
+      if (epochSeconds === null) {
+        epochSeconds = Math.floor(Date.now() / 1000) + (state.timeOffset || 0);
+      }
       const counter = Math.floor(epochSeconds / timeStep);
       const remainingSeconds = timeStep - (epochSeconds % timeStep);
 
@@ -830,9 +834,31 @@
         }
 
         const data = await res.json();
+        if (typeof data.server_time === 'number') {
+          state.timeOffset = data.server_time - Math.floor(Date.now() / 1000);
+        }
         state.salt = new Uint8Array(data.user.salt);
         state.pinVerifier = new Uint8Array(data.user.pin_verifier);
         state.accounts = data.accounts || [];
+
+        if (state.masterKey) {
+          state.decryptedAccounts = [];
+          for (const acc of state.accounts) {
+            try {
+              const secret = await decryptSecret(
+                new Uint8Array(acc.encrypted_secret),
+                state.masterKey,
+                new Uint8Array(acc.iv)
+              );
+              state.decryptedAccounts.push({
+                id: acc.id,
+                serviceName: acc.service_name,
+                accountLabel: acc.account_label,
+                secret,
+              });
+            } catch (_) {}
+          }
+        }
 
         document.getElementById('statusText').textContent = 'synced';
         renderAccounts();
@@ -877,7 +903,7 @@
 
     async function renderAccounts() {
       const container = document.getElementById('accountsList');
-      const query = (state.filter || '').toLowerCase();
+      const query = (state.filter || '').trim().toLowerCase();
 
       if (!state.masterKey) {
         container.innerHTML = `
@@ -905,7 +931,61 @@
         return;
       }
 
-      let html = '';
+      const existingCards = container.querySelectorAll('.account-card');
+      const currentIds = Array.from(existingCards).map(c => c.getAttribute('data-id'));
+      const newIds = filtered.map(a => String(a.id));
+      const needsRebuild = currentIds.length !== newIds.length || !currentIds.every((id, idx) => id === newIds[idx]);
+
+      if (needsRebuild) {
+        let html = '';
+        for (const acc of filtered) {
+          const btnId = `copy_btn_${acc.id}`;
+          html += `
+            <div class="account-card" id="card_${acc.id}" data-id="${acc.id}">
+              <div class="account-info">
+                <div class="account-header">
+                  <span class="service-name">${acc.serviceName}</span>
+                  ${acc.accountLabel ? `<span class="account-label">(${acc.accountLabel})</span>` : ''}
+                </div>
+                <div class="totp-code" id="code_${acc.id}">--- ---</div>
+              </div>
+              <div class="account-actions">
+                <div class="timer-container">
+                  <svg class="timer-svg" viewBox="0 0 44 44">
+                    <circle class="timer-circle-bg" cx="22" cy="22" r="18"></circle>
+                    <circle class="timer-circle-progress" id="ring_${acc.id}" cx="22" cy="22" r="18"
+                            style="stroke-dashoffset: 0; stroke: var(--success);"></circle>
+                  </svg>
+                  <span class="timer-text" id="time_${acc.id}" style="color: var(--success);">30s</span>
+                </div>
+                <button class="btn-copy" id="${btnId}">copy</button>
+              </div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+
+        for (const acc of filtered) {
+          const card = document.getElementById(`card_${acc.id}`);
+          const btn = document.getElementById(`copy_btn_${acc.id}`);
+
+          const doCopy = (e) => {
+            e.stopPropagation();
+            const currentCode = btn.getAttribute('data-raw-code');
+            if (currentCode) {
+              copyCode(currentCode, btn.id);
+            }
+          };
+
+          btn.addEventListener('click', doCopy);
+          card.addEventListener('click', (e) => {
+            if (e.target !== btn && !btn.contains(e.target)) {
+              doCopy(e);
+            }
+          });
+        }
+      }
+
       for (const acc of filtered) {
         const { code, remainingSeconds } = await computeTOTP(acc.secret);
         const dashOffset = 113 - (113 * (remainingSeconds / 30));
@@ -915,32 +995,27 @@
         else if (remainingSeconds <= 12) color = 'var(--warning)';
 
         const formattedCode = code.slice(0, 3) + ' ' + code.slice(3);
-        const btnId = `copy_btn_${acc.id}`;
 
-        html += `
-          <div class="account-card" onclick="copyCode('${code}', '${btnId}')">
-            <div class="account-info">
-              <div class="account-header">
-                <span class="service-name">${acc.serviceName}</span>
-                ${acc.accountLabel ? `<span class="account-label">(${acc.accountLabel})</span>` : ''}
-              </div>
-              <div class="totp-code">${formattedCode}</div>
-            </div>
-            <div class="account-actions">
-              <div class="timer-container">
-                <svg class="timer-svg" viewBox="0 0 44 44">
-                  <circle class="timer-circle-bg" cx="22" cy="22" r="18"></circle>
-                  <circle class="timer-circle-progress" cx="22" cy="22" r="18"
-                          style="stroke-dashoffset: ${dashOffset}; stroke: ${color};"></circle>
-                </svg>
-                <span class="timer-text" style="color: ${color};">${remainingSeconds}s</span>
-              </div>
-              <button class="btn-copy" id="${btnId}" onclick="event.stopPropagation(); copyCode('${code}', '${btnId}')">copy</button>
-            </div>
-          </div>
-        `;
+        const codeEl = document.getElementById(`code_${acc.id}`);
+        const ringEl = document.getElementById(`ring_${acc.id}`);
+        const timeEl = document.getElementById(`time_${acc.id}`);
+        const btn = document.getElementById(`copy_btn_${acc.id}`);
+
+        if (codeEl && codeEl.textContent !== formattedCode) {
+          codeEl.textContent = formattedCode;
+        }
+        if (ringEl) {
+          ringEl.style.strokeDashoffset = dashOffset;
+          ringEl.style.stroke = color;
+        }
+        if (timeEl) {
+          timeEl.textContent = remainingSeconds + 's';
+          timeEl.style.color = color;
+        }
+        if (btn) {
+          btn.setAttribute('data-raw-code', code);
+        }
       }
-      container.innerHTML = html;
     }
 
     setInterval(() => {
@@ -954,6 +1029,12 @@
       document.getElementById('pinInput').value = '';
       document.getElementById('pinInput').focus();
     };
+
+    document.getElementById('pinInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btnSubmitPin').click();
+      }
+    });
 
     document.getElementById('searchBox').addEventListener('input', (e) => {
       state.filter = e.target.value;

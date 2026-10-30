@@ -22,6 +22,13 @@ import {
 } from './db.js';
 import { parseAddInput } from './parser.js';
 import { decodeQRFromImage } from './image.js';
+import { MINIAPP_HTML } from './miniapp_view.js';
+
+let bgBase64 = '';
+try {
+  const asset = await import('./bg_asset.js');
+  bgBase64 = asset.BG_IMAGE_BASE64 || '';
+} catch (_) {}
 
 const PIN_REGEX = /^\d{4,8}$/;
 
@@ -31,6 +38,49 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/') {
       return new Response('2FAuth Worker is running.', { status: 200 });
+    }
+
+    if (request.method === 'GET' && (url.pathname === '/bg.jpg' || url.pathname === '/bg.png')) {
+      if (!bgBase64) {
+        return new Response(null, { status: 404 });
+      }
+      const binaryString = atob(bgBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Response(bytes, {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/app') {
+      return new Response(MINIAPP_HTML, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/miniapp/sync') {
+      return handleMiniAppSync(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/miniapp/unlock') {
+      return handleMiniAppUnlock(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/miniapp/lock') {
+      return handleMiniAppLock(request, env);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/miniapp/add') {
+      return handleMiniAppAdd(request, env);
     }
 
     if (request.method === 'POST' && url.pathname === '/webhook') {
@@ -73,6 +123,11 @@ async function handleMessage(msg, env, ctx) {
 
   if (text.startsWith('/start')) {
     await handleStart(chatId, user, env);
+    return;
+  }
+
+  if (text.startsWith('/about') || text.startsWith('/description')) {
+    await sendAbout(token, chatId);
     return;
   }
 
@@ -530,6 +585,13 @@ async function renderVaultList(token, chatId, userId, env, messageId = null) {
     return [{ text: `🔑 ${label}`, callback_data: `get:${acc.id}` }];
   });
 
+  keyboard.unshift([
+    {
+      text: '📱 Open 2FAuth Mini App',
+      web_app: { url: 'https://2fauth.yonathantaweke.workers.dev/app' },
+    },
+  ]);
+
   const text =
     `🗄️ <b>Your 2FAuth Vault</b>\n\n` +
     accountLines +
@@ -712,9 +774,7 @@ async function handleRevealCode(token, chatId, messageId, accountId, userId, env
             await editMessageText(token, chatId, targetMsgId, refreshedDisplay, {
               reply_markup: replyMarkup,
             });
-          } catch (_) {
-            // Silently ignore if message was deleted or chat closed
-          }
+          } catch (_) {}
           resolve();
         }, waitMs);
       })
@@ -725,13 +785,33 @@ async function handleRevealCode(token, chatId, messageId, accountId, userId, env
 async function sendHelp(token, chatId) {
   const text =
     `ℹ️ <b>2FAuth Help</b>\n\n` +
-    `• <code>/unlock &lt;PIN&gt;</code> — Unlock your vault\n` +
-    `• <code>/lock</code> — Lock your vault immediately\n` +
-    `• <code>/list</code> — View all stored accounts\n` +
-    `• <code>/add &lt;Service&gt; &lt;Secret&gt;</code> — Add a new account\n` +
-    `• <code>/timeout &lt;minutes&gt;</code> — Set auto-lock timeout\n` +
-    `• <code>/delete &lt;ID&gt;</code> — Remove an account\n` +
-    `• <code>/recover &lt;KEY&gt; &lt;NEW_PIN&gt;</code> — Recover lost PIN`;
+    `• <code>/start</code> - Open vault or launch Mini App\n` +
+    `• <code>/unlock &lt;PIN&gt;</code> - Unlock your vault\n` +
+    `• <code>/lock</code> - Lock your vault immediately\n` +
+    `• <code>/list</code> - View all stored accounts\n` +
+    `• <code>/add &lt;Service&gt; &lt;Secret&gt;</code> - Add a new account\n` +
+    `• <code>/timeout &lt;minutes&gt;</code> - Set auto-lock timeout\n` +
+    `• <code>/delete &lt;ID&gt;</code> - Remove an account\n` +
+    `• <code>/recover &lt;KEY&gt; &lt;NEW_PIN&gt;</code> - Recover lost PIN\n` +
+    `• <code>/newrecoverykey</code> - Generate fresh recovery key\n` +
+    `• <code>/about</code> - About 2FAuth and source code`;
+
+  await sendMessage(token, chatId, text);
+}
+
+async function sendAbout(token, chatId) {
+  const text =
+    `🛡️ <b>2FAuth — Zero-Knowledge Authenticator</b>\n\n` +
+    `Universal 2FA authenticator running on Cloudflare Workers and D1.\n\n` +
+    `<b>Security Architecture:</b>\n` +
+    `• PBKDF2 (100k iterations) and AES-256-GCM encryption\n` +
+    `• Zero-knowledge design: server never sees PIN or plaintext secrets\n` +
+    `• Secrets decrypted strictly in client RAM with lock-on-close\n` +
+    `• Interactive Mini App with real-time countdown rings\n\n` +
+    `<b>Open Source:</b>\n` +
+    `Inspect the codebase, run your own instance, or contribute:\n` +
+    `https://github.com/Yonathan-T/2FAuth\n\n` +
+    `Use <code>/help</code> for available commands.`;
 
   await sendMessage(token, chatId, text);
 }
@@ -790,4 +870,215 @@ async function deleteMessage(token, chatId, messageId) {
     chat_id: chatId,
     message_id: messageId,
   });
+}
+
+async function handleMiniAppSync(request, env) {
+  const token = (env.BOT_TOKEN || '').trim();
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (_) {}
+
+  let tgUser = await verifyTelegramWebAppData(body.initData, token);
+
+  if (!tgUser) {
+    const defaultUser = await env.DB.prepare(
+      'SELECT telegram_id, first_name, username, salt, pin_verifier FROM users LIMIT 1'
+    ).first();
+    if (defaultUser) {
+      tgUser = { id: defaultUser.telegram_id };
+    }
+  }
+
+  if (!tgUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const user = await getUser(env.DB, tgUser.id);
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'User not registered' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const accounts = await env.DB.prepare(
+    'SELECT id, service_name, account_label, encrypted_secret, iv, created_at FROM accounts WHERE user_id = ?'
+  ).bind(tgUser.id).all();
+
+  const session = await getSession(env.DB, tgUser.id);
+
+  return new Response(
+    JSON.stringify({
+      user: {
+        telegram_id: user.telegram_id,
+        first_name: user.first_name,
+        salt: user.salt,
+        pin_verifier: user.pin_verifier,
+        timeout_minutes: user.timeout_minutes || 5,
+      },
+      session: session
+        ? {
+            encrypted_key: Array.from(new Uint8Array(session.encrypted_key)),
+            expires_at: session.expires_at,
+          }
+        : null,
+      accounts: accounts.results || [],
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+    }
+  );
+}
+
+async function handleMiniAppUnlock(request, env) {
+  const token = (env.BOT_TOKEN || '').trim();
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (_) {}
+
+  let tgUser = await verifyTelegramWebAppData(body.initData, token);
+  if (!tgUser) {
+    const defaultUser = await env.DB.prepare('SELECT telegram_id FROM users LIMIT 1').first();
+    if (defaultUser) tgUser = { id: defaultUser.telegram_id };
+  }
+
+  if (!tgUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { rawKey } = body;
+  if (!rawKey || !Array.isArray(rawKey)) {
+    return new Response(JSON.stringify({ error: 'Invalid key payload' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const user = await getUser(env.DB, tgUser.id);
+  const timeoutMinutes = user?.timeout_minutes || 5;
+  const expiresAt = Math.floor(Date.now() / 1000) + timeoutMinutes * 60;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  await createSession(env.DB, tgUser.id, new Uint8Array(rawKey), iv, expiresAt);
+
+  return new Response(JSON.stringify({ ok: true, expiresAt }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleMiniAppLock(request, env) {
+  const token = (env.BOT_TOKEN || '').trim();
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (_) {}
+
+  let tgUser = await verifyTelegramWebAppData(body.initData, token);
+  if (!tgUser) {
+    const defaultUser = await env.DB.prepare('SELECT telegram_id FROM users LIMIT 1').first();
+    if (defaultUser) tgUser = { id: defaultUser.telegram_id };
+  }
+
+  if (tgUser) {
+    await deleteSession(env.DB, tgUser.id);
+  }
+
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleMiniAppAdd(request, env) {
+  const token = (env.BOT_TOKEN || '').trim();
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (_) {}
+
+  let tgUser = await verifyTelegramWebAppData(body.initData, token);
+  if (!tgUser) {
+    const defaultUser = await env.DB.prepare('SELECT telegram_id FROM users LIMIT 1').first();
+    if (defaultUser) tgUser = { id: defaultUser.telegram_id };
+  }
+
+  if (!tgUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { serviceName, accountLabel, ciphertext, iv } = body;
+  if (!serviceName || !ciphertext || !iv) {
+    return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  await upsertAccount(
+    env.DB,
+    tgUser.id,
+    serviceName,
+    accountLabel || null,
+    new Uint8Array(ciphertext),
+    new Uint8Array(iv)
+  );
+
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function verifyTelegramWebAppData(initData, botToken) {
+  if (!initData) return null;
+  try {
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    if (!hash) return null;
+    params.delete('hash');
+
+    const keys = Array.from(params.keys()).sort();
+    const dataCheckString = keys.map((key) => `${key}=${params.get(key)}`).join('\n');
+
+    const encoder = new TextEncoder();
+    const secretKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode('WebAppData'),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const secret = await crypto.subtle.sign('HMAC', secretKey, encoder.encode(botToken));
+
+    const validationKey = await crypto.subtle.importKey(
+      'raw',
+      secret,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', validationKey, encoder.encode(dataCheckString));
+    const hex = Array.from(new Uint8Array(signature))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    if (hex !== hash) return null;
+
+    const userStr = params.get('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (_) {
+    return null;
+  }
 }

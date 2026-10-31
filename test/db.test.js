@@ -153,3 +153,26 @@ test('Database supports multiple accounts for same service under different label
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].account_label, 'personal@gmail.com');
 });
+
+test('Database replaces existing account secret on duplicate service and label (or empty label)', async () => {
+  const d1 = createMockD1();
+  const salt = new Uint8Array([1, 2, 3]);
+  const verifier = new Uint8Array([4, 5, 6]);
+  await createUser(d1, 3003, 'Alex', null, salt, verifier, salt, verifier, 5);
+
+  const secA = new Uint8Array([1, 1, 1]);
+  const secB = new Uint8Array([2, 2, 2]);
+  const iv = new Uint8Array([9, 9, 9]);
+
+  const res1 = await upsertAccount(d1, 3003, 'GitHub', null, secA, iv);
+  assert.equal(res1.action, 'created');
+
+  const res2 = await upsertAccount(d1, 3003, 'github', '', secB, iv);
+  assert.equal(res2.action, 'updated');
+
+  const accounts = await listAccounts(d1, 3003);
+  assert.equal(accounts.length, 1);
+
+  const acc = await getAccount(d1, 3003, 'GitHub');
+  assert.deepEqual(new Uint8Array(acc.encrypted_secret), secB);
+});

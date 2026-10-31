@@ -93,14 +93,28 @@ export async function purgeExpiredSessions(db) {
 }
 
 export async function upsertAccount(db, userId, serviceName, accountLabel, encryptedSecret, iv) {
-  const statement = db.prepare(
+  const sName = serviceName.trim();
+  const normLabel = (accountLabel && accountLabel.trim()) ? accountLabel.trim() : '';
+
+  const existing = await db.prepare(
+    `SELECT id FROM accounts
+     WHERE user_id = ? AND LOWER(service_name) = LOWER(?) AND (account_label = ? OR (account_label IS NULL AND ? = ''))`
+  ).bind(userId, sName, normLabel, normLabel).first();
+
+  if (existing) {
+    await db.prepare(
+      `UPDATE accounts
+       SET service_name = ?, account_label = ?, encrypted_secret = ?, iv = ?
+       WHERE id = ?`
+    ).bind(sName, normLabel, encryptedSecret, iv, existing.id).run();
+    return { action: 'updated', id: existing.id };
+  }
+
+  const result = await db.prepare(
     `INSERT INTO accounts (user_id, service_name, account_label, encrypted_secret, iv)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, service_name, account_label) DO UPDATE SET
-       encrypted_secret = excluded.encrypted_secret,
-       iv = excluded.iv`
-  );
-  return statement.bind(userId, serviceName, accountLabel || null, encryptedSecret, iv).run();
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(userId, sName, normLabel, encryptedSecret, iv).run();
+  return { action: 'created', id: result?.lastRowId || result?.meta?.last_row_id };
 }
 
 export async function listAccounts(db, userId) {
@@ -115,21 +129,23 @@ export async function listAccounts(db, userId) {
 }
 
 export async function getAccount(db, userId, serviceName, accountLabel = null) {
-  if (accountLabel) {
+  const sName = serviceName.trim();
+  if (accountLabel !== null && accountLabel !== undefined && accountLabel !== '') {
+    const normLabel = accountLabel.trim();
     const statement = db.prepare(
       `SELECT id, service_name, account_label, encrypted_secret, iv, created_at
        FROM accounts
-       WHERE user_id = ? AND service_name = ? AND account_label = ?`
+       WHERE user_id = ? AND LOWER(service_name) = LOWER(?) AND account_label = ?`
     );
-    return statement.bind(userId, serviceName, accountLabel).first();
+    return statement.bind(userId, sName, normLabel).first();
   }
 
   const statement = db.prepare(
     `SELECT id, service_name, account_label, encrypted_secret, iv, created_at
      FROM accounts
-     WHERE user_id = ? AND service_name = ?`
+     WHERE user_id = ? AND LOWER(service_name) = LOWER(?) AND (account_label = '' OR account_label IS NULL)`
   );
-  return statement.bind(userId, serviceName).first();
+  return statement.bind(userId, sName).first();
 }
 
 export async function getAccountById(db, userId, accountId) {
@@ -142,19 +158,21 @@ export async function getAccountById(db, userId, accountId) {
 }
 
 export async function deleteAccount(db, userId, serviceName, accountLabel = null) {
-  if (accountLabel) {
+  const sName = serviceName.trim();
+  if (accountLabel !== null && accountLabel !== undefined && accountLabel !== '') {
+    const normLabel = accountLabel.trim();
     const statement = db.prepare(
       `DELETE FROM accounts
-       WHERE user_id = ? AND service_name = ? AND account_label = ?`
+       WHERE user_id = ? AND LOWER(service_name) = LOWER(?) AND account_label = ?`
     );
-    return statement.bind(userId, serviceName, accountLabel).run();
+    return statement.bind(userId, sName, normLabel).run();
   }
 
   const statement = db.prepare(
     `DELETE FROM accounts
-     WHERE user_id = ? AND service_name = ?`
+     WHERE user_id = ? AND LOWER(service_name) = LOWER(?) AND (account_label = '' OR account_label IS NULL)`
   );
-  return statement.bind(userId, serviceName).run();
+  return statement.bind(userId, sName).run();
 }
 
 export async function deleteAccountById(db, userId, accountId) {

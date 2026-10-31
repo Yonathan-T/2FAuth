@@ -84,6 +84,10 @@ export default {
       return handleMiniAppAdd(request, env);
     }
 
+    if (request.method === 'POST' && url.pathname === '/api/miniapp/delete') {
+      return handleMiniAppDelete(request, env);
+    }
+
     if (request.method === 'POST' && url.pathname === '/webhook') {
       env.BOT_TOKEN = (env.BOT_TOKEN || '').trim();
       try {
@@ -456,12 +460,13 @@ async function handleAddCommand(chatId, userId, text, env) {
   );
 
   const { ciphertext, iv } = await encryptSecret(parsed.secret, key);
-  await upsertAccount(env.DB, user.telegram_id, parsed.serviceName, parsed.accountLabel, ciphertext, iv);
+  const result = await upsertAccount(env.DB, user.telegram_id, parsed.serviceName, parsed.accountLabel, ciphertext, iv);
 
+  const isUpdated = result?.action === 'updated';
   const confirmText =
-    `✅ Saved <b>${escapeHtml(parsed.serviceName)}</b>` +
+    (isUpdated ? `🔄 Updated <b>${escapeHtml(parsed.serviceName)}</b>` : `✅ Saved <b>${escapeHtml(parsed.serviceName)}</b>`) +
     (parsed.accountLabel ? ` (${escapeHtml(parsed.accountLabel)})` : '') +
-    ` to your vault!`;
+    (isUpdated ? ` in your vault!` : ` to your vault!`);
 
   await sendMessage(token, chatId, confirmText);
   await renderVaultList(token, chatId, user.telegram_id, env);
@@ -582,12 +587,14 @@ async function handlePhotoMessage(msg, env) {
   );
 
   const { ciphertext, iv } = await encryptSecret(parsed.secret, key);
-  await upsertAccount(env.DB, user.telegram_id, parsed.serviceName, parsed.accountLabel, ciphertext, iv);
+  const result = await upsertAccount(env.DB, user.telegram_id, parsed.serviceName, parsed.accountLabel, ciphertext, iv);
 
+  const isUpdated = result?.action === 'updated';
   const text =
-    `✅ <b>Account Added!</b>\n\n` +
+    (isUpdated ? `🔄 <b>Account Updated!</b>\n\n` : `✅ <b>Account Added!</b>\n\n`) +
     `• Service: <b>${escapeHtml(parsed.serviceName)}</b>\n` +
-    (parsed.accountLabel ? `• Account: <code>${escapeHtml(parsed.accountLabel)}</code>\n` : '');
+    (parsed.accountLabel ? `• Account: <code>${escapeHtml(parsed.accountLabel)}</code>\n` : '') +
+    (isUpdated ? `\n<i>(Existing 2FA key was replaced with the new one)</i>` : '');
 
   await sendMessage(token, chatId, text);
   await renderVaultList(token, chatId, user.telegram_id, env);
@@ -1085,7 +1092,7 @@ async function handleMiniAppAdd(request, env) {
     });
   }
 
-  await upsertAccount(
+  const result = await upsertAccount(
     env.DB,
     tgUser.id,
     serviceName,
@@ -1093,6 +1100,41 @@ async function handleMiniAppAdd(request, env) {
     new Uint8Array(ciphertext),
     new Uint8Array(iv)
   );
+
+  return new Response(JSON.stringify({ ok: true, action: result?.action || 'saved' }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function handleMiniAppDelete(request, env) {
+  const token = (env.BOT_TOKEN || '').trim();
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (_) {}
+
+  let tgUser = await verifyTelegramWebAppData(body?.initData, token);
+  if (!tgUser) {
+    const defaultUser = await env.DB.prepare('SELECT telegram_id FROM users LIMIT 1').first();
+    if (defaultUser) tgUser = { id: defaultUser.telegram_id };
+  }
+
+  if (!tgUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const accountId = Number(body?.accountId);
+  if (!accountId) {
+    return new Response(JSON.stringify({ error: 'Missing accountId' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  await deleteAccountById(env.DB, tgUser.id, accountId);
 
   return new Response(JSON.stringify({ ok: true }), {
     headers: { 'Content-Type': 'application/json' },

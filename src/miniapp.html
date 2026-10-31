@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>2fauth</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
@@ -435,6 +436,177 @@
       line-height: 1.4;
     }
 
+    .modal-tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .modal-tab-btn {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .modal-tab-btn.active {
+      background: var(--accent);
+      color: #09090b;
+      box-shadow: 0 0 10px rgba(216, 180, 254, 0.3);
+    }
+
+    .field-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+      display: block;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border-bright);
+      border-radius: 6px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.25);
+      transition: all 0.2s ease;
+      margin-bottom: 14px;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(216, 180, 254, 0.05);
+      box-shadow: 0 0 16px rgba(216, 180, 254, 0.15);
+    }
+
+    .drop-icon {
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lucide-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      stroke: currentColor;
+    }
+
+    .anim-pulse {
+      animation: animPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes animPulse {
+      0%, 100% { opacity: 0.5; transform: scale(0.96); }
+      50% { opacity: 1; transform: scale(1.04); filter: drop-shadow(0 0 8px var(--accent)); }
+    }
+
+    .anim-float {
+      animation: animFloat 3s ease-in-out infinite;
+    }
+    @keyframes animFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .anim-bounce {
+      animation: animBounce 2s ease-in-out infinite;
+    }
+    @keyframes animBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    .scan-laser-beam {
+      animation: scanLaser 2.2s ease-in-out infinite alternate;
+      transform-origin: center;
+    }
+    @keyframes scanLaser {
+      0% { transform: translateY(-7px); opacity: 0.35; }
+      50% { opacity: 1; stroke: #ffffff; filter: drop-shadow(0 0 5px var(--accent)); }
+      100% { transform: translateY(7px); opacity: 0.35; }
+    }
+
+    .anim-spin-hover:hover {
+      animation: animSpin 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes animSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .anim-tilt-hover:hover {
+      animation: animTilt 0.4s ease-in-out;
+    }
+    @keyframes animTilt {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-12deg); }
+    }
+
+    .anim-twinkle {
+      animation: animTwinkle 2.5s ease-in-out infinite;
+    }
+    @keyframes animTwinkle {
+      0%, 100% { opacity: 0.6; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 4px var(--accent)); }
+    }
+
+    .anim-trash-hover:hover {
+      animation: animTrashWiggle 0.4s ease-in-out;
+    }
+    @keyframes animTrashWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(10deg); }
+    }
+
+    .anim-shackle {
+      animation: shackleSnap 3s ease-in-out infinite;
+      transform-origin: center;
+    }
+    @keyframes shackleSnap {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2.5px); }
+    }
+
+    @keyframes shakeInput {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake {
+      animation: shakeInput 0.4s ease-in-out;
+      border-color: var(--danger) !important;
+      box-shadow: 0 0 14px rgba(252, 165, 165, 0.4) !important;
+    }
+
+    .drop-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+
     .pin-input {
       width: 100%;
       background: rgba(0, 0, 0, 0.6);
@@ -568,7 +740,15 @@
 
     <div class="accounts-list" id="accountsList">
       <div class="empty-state">
-        <div class="empty-state-icon">📡</div>
+        <div class="empty-state-icon">
+          <svg class="lucide-icon anim-pulse" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+            <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+            <circle cx="12" cy="12" r="2" fill="var(--accent)"/>
+            <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+            <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>
+          </svg>
+        </div>
         <div class="empty-state-title">connecting to vault...</div>
         <div class="empty-state-desc">fetching zero-knowledge encrypted payload from edge node.</div>
       </div>
@@ -595,13 +775,147 @@
   <div class="modal-backdrop" id="addModal">
     <div class="modal-card">
       <div class="modal-title">+ add 2fa account</div>
-      <div class="modal-subtitle">paste otpauth:// URI or enter service and secret key manually.</div>
-      <input type="text" class="search-box" id="addUriInput" placeholder="otpauth://totp/... or Secret" style="margin-bottom: 8px;">
-      <input type="text" class="search-box" id="addServiceInput" placeholder="service name (e.g. GitHub)" style="margin-bottom: 8px;">
-      <input type="text" class="search-box" id="addLabelInput" placeholder="account label (e.g. email)" style="margin-bottom: 16px;">
-      <div style="display: flex; gap: 8px;">
-        <button class="btn" id="btnCancelAdd">cancel</button>
-        <button class="btn btn-primary" id="btnSubmitAdd">save to vault</button>
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" id="tabBtnManual" type="button">manual key</button>
+        <button class="modal-tab-btn" id="tabBtnQr" type="button">scan / qr image</button>
+      </div>
+
+      <div id="addManualView">
+        <label class="field-label" for="addUriInput">2fa secret key or link</label>
+        <input type="text" class="search-box" id="addUriInput" placeholder="paste secret (e.g. JBSWY3D...) or URI" style="margin-bottom: 10px;" autocomplete="off">
+
+        <label class="field-label" for="addServiceInput">service name</label>
+        <input type="text" class="search-box" id="addServiceInput" placeholder="e.g. Google, GitHub, Binance" style="margin-bottom: 10px;" autocomplete="off">
+
+        <label class="field-label" for="addLabelInput">account / email (optional)</label>
+        <input type="text" class="search-box" id="addLabelInput" placeholder="e.g. user@gmail.com" style="margin-bottom: 16px;" autocomplete="off">
+
+        <div id="addCollisionPrompt" style="display: none; background: rgba(253, 224, 71, 0.08); border: 1px solid var(--warning); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--warning); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <svg class="lucide-icon anim-bounce" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+              <path d="M12 9v4"/><path d="M12 17h.01"/>
+            </svg>
+            <span>account already exists</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text); margin-bottom: 10px; line-height: 1.4;" id="collisionMsgText">
+            an account for this service is already in your vault. do you want to replace its 2fa key, or add a label to keep both?
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btnConfirmReplace" type="button" style="font-size: 0.7rem; padding: 6px 10px; display: inline-flex; align-items: center; gap: 5px;">
+              <svg class="lucide-icon anim-spin-hover" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 16h5v5"/>
+              </svg>
+              <span>replace key</span>
+            </button>
+            <button class="btn" id="btnAddLabelFocus" type="button" style="font-size: 0.7rem; padding: 6px 10px; display: inline-flex; align-items: center; gap: 5px;">
+              <svg class="lucide-icon anim-tilt-hover" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/>
+                <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
+              </svg>
+              <span>add label</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;" id="addFormActions">
+          <button class="btn" id="btnCancelAdd">cancel</button>
+          <button class="btn btn-primary" id="btnSubmitAdd">save to vault</button>
+        </div>
+
+        <div style="font-size: 0.68rem; color: var(--muted); margin-top: 14px; text-align: center; line-height: 1.4; display: flex; align-items: center; justify-content: center; gap: 5px;">
+          <svg class="lucide-icon anim-twinkle" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          </svg>
+          <span>tip: you can also send a qr screenshot directly to the bot in telegram chat!</span>
+        </div>
+      </div>
+
+      <div id="addQrView" style="display: none;">
+        <button class="btn btn-primary" id="btnScanCamera" type="button" style="margin-bottom: 12px; width: 100%; display: none; align-items: center; justify-content: center; gap: 6px;">
+          <svg class="lucide-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+          <span>scan with camera</span>
+        </button>
+
+        <div class="drop-zone" id="qrDropZone">
+          <div class="drop-icon">
+            <svg class="lucide-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+              <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <rect x="7" y="7" width="3" height="3" fill="var(--accent)"/>
+              <rect x="14" y="7" width="3" height="3" fill="var(--accent)"/>
+              <rect x="7" y="14" width="3" height="3" fill="var(--accent)"/>
+              <line class="scan-laser-beam" x1="4" y1="12" x2="20" y2="12" stroke="var(--accent)" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="drop-title">drag & drop qr screenshot</div>
+          <div class="drop-sub">or click to browse from device</div>
+          <input type="file" id="qrFileInput" accept="image/*" style="display: none;">
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" id="btnCancelAddQr">cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="manageModal">
+    <div class="modal-card">
+      <div class="modal-title" id="manageServiceName">account details</div>
+      <div class="modal-subtitle" id="manageAccountLabel" style="word-break: break-all; margin-bottom: 14px;"></div>
+
+      <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 6px; padding: 14px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 0.68rem; color: var(--muted); margin-bottom: 6px;">current 2fa code</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #e9d8fd; letter-spacing: 0.15em; text-shadow: 0 0 16px rgba(216, 180, 254, 0.4);" id="manageCodeDisplay">--- ---</div>
+      </div>
+
+      <div id="deleteConfirmBox" style="display: none; background: rgba(252, 165, 165, 0.08); border: 1px solid var(--danger); border-radius: 6px; padding: 14px; margin-bottom: 14px; text-align: center;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--danger); margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg class="lucide-icon anim-bounce" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+            <path d="M12 9v4"/><path d="M12 17h.01"/>
+          </svg>
+          <span>are you sure?</span>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text); margin-bottom: 12px; line-height: 1.4;">
+          this will permanently remove this 2fa account from your vault.
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" id="btnCancelDeleteAction" type="button">cancel</button>
+          <button class="btn btn-danger" id="btnConfirmDeleteAction" type="button" style="background: rgba(252, 165, 165, 0.2); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <svg class="lucide-icon anim-trash-hover" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+            <span>delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;" id="manageDefaultActions">
+        <button class="btn" id="btnCloseManage" type="button">close</button>
+        <button class="btn btn-danger" id="btnOpenDeletePrompt" type="button" style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg class="lucide-icon anim-trash-hover" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          <span>delete</span>
+        </button>
       </div>
     </div>
   </div>
@@ -626,6 +940,7 @@
       decryptedAccounts: [],
       filter: '',
       timeOffset: 0,
+      selectedAccountId: null,
     };
 
     function updateClock() {
@@ -667,7 +982,7 @@
         document.execCommand('copy');
         onCopySuccess(code, btnId);
       } catch (err) {
-        showToast('⚠️ Copy failed');
+        showToast('Copy failed');
       }
       document.body.removeChild(el);
     }
@@ -865,7 +1180,12 @@
       } catch (err) {
         document.getElementById('accountsList').innerHTML =
           `<div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-icon">
+              <svg class="lucide-icon anim-bounce" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+                <path d="M12 9v4"/><path d="M12 17h.01"/>
+              </svg>
+            </div>
             <div class="empty-state-title" style="color: var(--danger)">connection error</div>
             <div class="empty-state-desc">${err.message}</div>
           </div>`;
@@ -875,7 +1195,7 @@
     async function unlockWithPin(pin) {
       const isValid = await verifyPin(pin, state.salt, state.pinVerifier);
       if (!isValid) {
-        showToast('❌ Incorrect PIN');
+        showToast('Incorrect PIN');
         return false;
       }
 
@@ -884,11 +1204,12 @@
       const rawBytes = new Uint8Array(rawKey);
 
       await restoreKeyFromBytes(rawBytes);
-      showToast('🔓 Vault Unlocked');
+      showToast('Vault Unlocked');
       return true;
     }
 
     function lockVault() {
+      closeManageModal();
       state.masterKey = null;
       state.decryptedAccounts = [];
       localStorage.removeItem('2fauth_session');
@@ -897,7 +1218,7 @@
       document.getElementById('lockStatusText').textContent = 'locked';
       document.getElementById('lockStatusPill').style.borderColor = 'var(--border)';
       document.getElementById('actionBar').style.display = 'none';
-      showToast('🔒 Vault Locked');
+      showToast('Vault Locked');
       renderAccounts();
     }
 
@@ -908,7 +1229,13 @@
       if (!state.masterKey) {
         container.innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon">🔒</div>
+            <div class="empty-state-icon">
+              <svg class="lucide-icon anim-pulse" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 20H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2.5"/>
+                <rect width="8" height="5" x="14" y="17" rx="1" fill="rgba(216, 180, 254, 0.15)"/>
+                <path class="anim-shackle" d="M20 17v-2a2 2 0 1 0-4 0v2"/>
+              </svg>
+            </div>
             <div class="empty-state-title">vault is locked</div>
             <div class="empty-state-desc">enter your master pin to derive the local aes-256 decryption key.</div>
             <button class="empty-state-btn" onclick="openPinModal()">unlock vault</button>
@@ -924,7 +1251,11 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <div class="empty-state-icon">📂</div>
+            <div class="empty-state-icon">
+              <svg class="lucide-icon anim-float" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </div>
             <div class="empty-state-title">no accounts found</div>
             <div class="empty-state-desc">add your first 2fa service using the [+ add] button below.</div>
           </div>`;
@@ -980,7 +1311,7 @@
           btn.addEventListener('click', doCopy);
           card.addEventListener('click', (e) => {
             if (e.target !== btn && !btn.contains(e.target)) {
-              doCopy(e);
+              openManageModal(acc);
             }
           });
         }
@@ -1016,6 +1347,19 @@
           btn.setAttribute('data-raw-code', code);
         }
       }
+
+      if (state.selectedAccountId) {
+        const selAcc = state.decryptedAccounts.find(a => a.id === state.selectedAccountId);
+        if (selAcc) {
+          const { code } = await computeTOTP(selAcc.secret);
+          const formatted = code.slice(0, 3) + ' ' + code.slice(3);
+          const displayEl = document.getElementById('manageCodeDisplay');
+          if (displayEl && displayEl.textContent !== formatted) {
+            displayEl.textContent = formatted;
+            displayEl.setAttribute('data-raw-code', code);
+          }
+        }
+      }
     }
 
     setInterval(() => {
@@ -1046,30 +1390,279 @@
     });
 
     document.getElementById('btnSubmitPin').addEventListener('click', async () => {
-      const pin = document.getElementById('pinInput').value.trim();
+      const pinInput = document.getElementById('pinInput');
+      const pin = pinInput.value.trim();
       if (!pin) return;
       const ok = await unlockWithPin(pin);
       if (ok) {
         document.getElementById('pinModal').classList.remove('active');
+        pinInput.value = '';
+      } else {
+        pinInput.value = '';
+        pinInput.focus();
+        pinInput.classList.remove('shake');
+        void pinInput.offsetWidth;
+        pinInput.classList.add('shake');
+        setTimeout(() => pinInput.classList.remove('shake'), 450);
       }
     });
 
     document.getElementById('btnLock').addEventListener('click', lockVault);
     document.getElementById('btnLock').style.display = 'none';
 
-    document.getElementById('btnAdd').addEventListener('click', () => {
-      if (!state.masterKey) {
-        showToast('🔒 Unlock vault first');
+    function openManageModal(acc) {
+      state.selectedAccountId = acc.id;
+      document.getElementById('manageServiceName').textContent = acc.serviceName;
+      document.getElementById('manageAccountLabel').textContent = acc.accountLabel ? `account: ${acc.accountLabel}` : 'no account label';
+      
+      const codeEl = document.getElementById(`code_${acc.id}`);
+      const rawCode = document.getElementById(`copy_btn_${acc.id}`)?.getAttribute('data-raw-code') || '';
+      const displayEl = document.getElementById('manageCodeDisplay');
+      displayEl.textContent = codeEl ? codeEl.textContent : '--- ---';
+      displayEl.setAttribute('data-raw-code', rawCode);
+
+      document.getElementById('deleteConfirmBox').style.display = 'none';
+      document.getElementById('manageDefaultActions').style.display = 'flex';
+      document.getElementById('manageModal').classList.add('active');
+    }
+
+    function closeManageModal() {
+      state.selectedAccountId = null;
+      document.getElementById('manageModal').classList.remove('active');
+      document.getElementById('deleteConfirmBox').style.display = 'none';
+      document.getElementById('manageDefaultActions').style.display = 'flex';
+    }
+
+    document.getElementById('btnCloseManage').addEventListener('click', closeManageModal);
+
+    document.getElementById('manageCodeDisplay').addEventListener('click', () => {
+      const code = document.getElementById('manageCodeDisplay').getAttribute('data-raw-code');
+      if (code) {
+        copyCode(code, null);
+      }
+    });
+
+    document.getElementById('btnOpenDeletePrompt').addEventListener('click', () => {
+      document.getElementById('deleteConfirmBox').style.display = 'block';
+      document.getElementById('manageDefaultActions').style.display = 'none';
+    });
+
+    document.getElementById('btnCancelDeleteAction').addEventListener('click', () => {
+      document.getElementById('deleteConfirmBox').style.display = 'none';
+      document.getElementById('manageDefaultActions').style.display = 'flex';
+    });
+
+    document.getElementById('btnConfirmDeleteAction').addEventListener('click', async () => {
+      if (!state.selectedAccountId) return;
+      const accountId = state.selectedAccountId;
+      const initData = tg?.initData || '';
+
+      try {
+        const res = await fetch('/api/miniapp/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData, accountId }),
+        });
+
+        if (res.ok) {
+          showToast('Account deleted');
+          closeManageModal();
+          state.decryptedAccounts = state.decryptedAccounts.filter(a => a.id !== accountId);
+          state.accounts = state.accounts.filter(a => a.id !== accountId);
+          renderAccounts();
+          await syncVault();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.error || 'Delete failed');
+        }
+      } catch (err) {
+        showToast('Error deleting account');
+      }
+    });
+
+    function switchToAddTab(tab) {
+      const isManual = tab === 'manual';
+      document.getElementById('tabBtnManual').classList.toggle('active', isManual);
+      document.getElementById('tabBtnQr').classList.toggle('active', !isManual);
+      document.getElementById('addManualView').style.display = isManual ? 'block' : 'none';
+      document.getElementById('addQrView').style.display = isManual ? 'none' : 'block';
+    }
+
+    document.getElementById('tabBtnManual').addEventListener('click', () => switchToAddTab('manual'));
+    document.getElementById('tabBtnQr').addEventListener('click', () => switchToAddTab('qr'));
+    document.getElementById('btnCancelAddQr').addEventListener('click', () => {
+      document.getElementById('addModal').classList.remove('active');
+    });
+
+    function applyDecodedUri(raw) {
+      if (!raw) return;
+      let clean = raw.trim();
+      let secret = clean;
+      let service = '';
+      let label = '';
+
+      if (clean.startsWith('otpauth://')) {
+        try {
+          const url = new URL(clean);
+          secret = url.searchParams.get('secret') || secret;
+          service = url.searchParams.get('issuer') || '';
+          if (url.pathname) {
+            const pathPart = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+            if (pathPart.includes(':')) {
+              const parts = pathPart.split(':');
+              if (!service) service = parts[0].trim();
+              label = parts.slice(1).join(':').trim();
+            } else if (!service) {
+              if (pathPart.includes('@')) {
+                const atParts = pathPart.split('@');
+                label = atParts[0].trim();
+                service = atParts[1].trim();
+              } else {
+                service = pathPart.trim();
+              }
+            } else {
+              label = pathPart.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      document.getElementById('addUriInput').value = secret;
+      if (service) document.getElementById('addServiceInput').value = service;
+      if (label) document.getElementById('addLabelInput').value = label;
+    }
+
+    document.getElementById('addUriInput').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val.startsWith('otpauth://')) {
+        applyDecodedUri(val);
+      }
+    });
+
+    const btnScanCam = document.getElementById('btnScanCamera');
+    if (tg?.showScanQrPopup) {
+      btnScanCam.style.display = 'flex';
+      btnScanCam.addEventListener('click', () => {
+        tg.showScanQrPopup({ text: 'Scan 2FA QR Code' }, (data) => {
+          if (data) {
+            applyDecodedUri(data);
+            try { tg.closeScanQrPopup(); } catch (_) {}
+            showToast('QR Code Scanned');
+            switchToAddTab('manual');
+            return true;
+          }
+        });
+      });
+    }
+
+    function processQrImageFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        showToast('Please select an image file');
         return;
       }
+      showToast('Scanning image...');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imgData = ctx.getImageData(0, 0, img.width, img.height);
+            if (typeof window.jsQR === 'function') {
+              const code = window.jsQR(imgData.data, imgData.width, imgData.height);
+              if (code && code.data) {
+                applyDecodedUri(code.data);
+                showToast('QR Code Detected');
+                switchToAddTab('manual');
+              } else {
+                showToast('No QR code found in image');
+              }
+            } else {
+              showToast('QR decoder loading...');
+            }
+          } catch (err) {
+            showToast('Error reading image');
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    const dropZone = document.getElementById('qrDropZone');
+    const fileInput = document.getElementById('qrFileInput');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        processQrImageFile(e.target.files[0]);
+        fileInput.value = '';
+      }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        processQrImageFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function hideCollisionPrompt() {
+      const prompt = document.getElementById('addCollisionPrompt');
+      if (prompt) prompt.style.display = 'none';
+      const actions = document.getElementById('addFormActions');
+      if (actions) actions.style.display = 'flex';
+    }
+
+    document.getElementById('addServiceInput').addEventListener('input', hideCollisionPrompt);
+    document.getElementById('addLabelInput').addEventListener('input', hideCollisionPrompt);
+
+    document.getElementById('btnAddLabelFocus').addEventListener('click', () => {
+      hideCollisionPrompt();
+      const labelInput = document.getElementById('addLabelInput');
+      labelInput.focus();
+      labelInput.placeholder = 'e.g. personal, work, etc.';
+    });
+
+    document.getElementById('btnConfirmReplace').addEventListener('click', () => {
+      hideCollisionPrompt();
+      submitAddAccount(true);
+    });
+
+    document.getElementById('btnAdd').addEventListener('click', () => {
+      if (!state.masterKey) {
+        showToast('Unlock vault first');
+        return;
+      }
+      hideCollisionPrompt();
+      switchToAddTab('manual');
       document.getElementById('addModal').classList.add('active');
     });
 
     document.getElementById('btnCancelAdd').addEventListener('click', () => {
+      hideCollisionPrompt();
       document.getElementById('addModal').classList.remove('active');
     });
 
-    document.getElementById('btnSubmitAdd').addEventListener('click', async () => {
+    document.getElementById('btnSubmitAdd').addEventListener('click', () => {
+      submitAddAccount(false);
+    });
+
+    async function submitAddAccount(forceReplace = false) {
       const uriInput = document.getElementById('addUriInput').value.trim();
       let service = document.getElementById('addServiceInput').value.trim();
       let label = document.getElementById('addLabelInput').value.trim();
@@ -1079,14 +1672,50 @@
         try {
           const url = new URL(uriInput);
           secret = url.searchParams.get('secret') || '';
-          service = url.searchParams.get('issuer') || decodeURIComponent(url.pathname.replace(/^\/\/totp\//, '').split(':')[0]) || service;
-          label = url.pathname.includes(':') ? decodeURIComponent(url.pathname.split(':')[1]) : label;
+          service = url.searchParams.get('issuer') || '';
+          if (url.pathname) {
+            const pathPart = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+            if (pathPart.includes(':')) {
+              const parts = pathPart.split(':');
+              if (!service) service = parts[0].trim();
+              label = parts.slice(1).join(':').trim();
+            } else if (!service) {
+              if (pathPart.includes('@')) {
+                const atParts = pathPart.split('@');
+                label = atParts[0].trim();
+                service = atParts[1].trim();
+              } else {
+                service = pathPart.trim();
+              }
+            } else {
+              label = pathPart.trim();
+            }
+          }
         } catch (_) {}
       }
 
       if (!secret || !service) {
-        showToast('⚠️ Provide service & secret');
+        showToast('Provide service & key');
         return;
+      }
+
+      if (!forceReplace) {
+        const normService = service.toLowerCase();
+        const normLabel = (label || '').toLowerCase();
+        const existing = state.decryptedAccounts.find(a =>
+          a.serviceName.toLowerCase() === normService &&
+          (a.accountLabel || '').toLowerCase() === normLabel
+        );
+
+        if (existing) {
+          const prompt = document.getElementById('addCollisionPrompt');
+          const msg = document.getElementById('collisionMsgText');
+          const nameText = label ? `${service} (${label})` : service;
+          msg.textContent = `"${nameText}" is already in your vault. Do you want to replace its 2FA key, or add a label to keep both?`;
+          prompt.style.display = 'block';
+          document.getElementById('addFormActions').style.display = 'none';
+          return;
+        }
       }
 
       const { ciphertext, iv } = await encryptSecret(secret, state.masterKey);
@@ -1105,16 +1734,18 @@
       });
 
       if (res.ok) {
-        showToast('✅ Account Saved');
+        const resData = await res.json().catch(() => ({}));
+        showToast(resData.action === 'updated' || forceReplace ? 'Account Updated' : 'Account Saved');
         document.getElementById('addModal').classList.remove('active');
         document.getElementById('addUriInput').value = '';
         document.getElementById('addServiceInput').value = '';
         document.getElementById('addLabelInput').value = '';
+        hideCollisionPrompt();
         await syncVault();
       } else {
-        showToast('⚠️ Save failed');
+        showToast('Save failed');
       }
-    });
+    }
 
     syncVault();
   </script>

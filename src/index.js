@@ -270,8 +270,13 @@ async function handleUnlock(msg, env) {
 
   await deleteMessage(token, chatId, msg.message_id);
 
-  if (parts.length < 2 || !PIN_REGEX.test(parts[1])) {
+  if (parts.length < 2) {
     await sendMessage(token, chatId, '⚠️ Format: <code>/unlock &lt;PIN&gt;</code>');
+    return;
+  }
+
+  if (!PIN_REGEX.test(parts[1])) {
+    await sendMessage(token, chatId, '⚠️ PIN must be between 4 and 8 digits.');
     return;
   }
 
@@ -330,8 +335,13 @@ async function handleRecover(msg, env) {
 
   await deleteMessage(token, chatId, msg.message_id);
 
-  if (parts.length < 3 || !PIN_REGEX.test(parts[2])) {
+  if (parts.length < 3) {
     await sendMessage(token, chatId, '⚠️ Format: <code>/recover &lt;RECOVERY_KEY&gt; &lt;NEW_PIN&gt;</code>');
+    return;
+  }
+
+  if (!PIN_REGEX.test(parts[2])) {
+    await sendMessage(token, chatId, '⚠️ New PIN must be between 4 and 8 digits.');
     return;
   }
 
